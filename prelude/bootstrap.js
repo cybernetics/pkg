@@ -1285,6 +1285,7 @@ var modifyNativeAddonWin32 = (function () {
       var Script = require('vm').Script;
       var script = new Script(undefined, options);
       var wrapper = script.runInThisContext(options);
+      if (!wrapper) process.exit(4); // for example VERSION_MISMATCH
       var dirname = require('path').dirname(filename);
       var rqfn = makeRequireFunction.call(this);
       var args = [ this.exports, rqfn, this, filename, dirname ];
