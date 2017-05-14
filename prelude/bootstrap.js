@@ -3,7 +3,7 @@
 /* eslint-disable prefer-rest-params */
 
 /* global EXECPATH_FD */
-/* global PAYLOAD_BASE */
+/* global PAYLOAD_POSITION */
 /* global REQUIRE_COMMON */
 /* global VIRTUAL_FILESYSTEM */
 /* global DEFAULT_ENTRYPOINT */
@@ -168,7 +168,7 @@ function findNativeAddon (path) {
 function payloadCopySync (source, target, targetStart, sourceStart, sourceEnd) {
   if (sourceStart >= source[1]) return 0;
   if (sourceEnd >= source[1]) sourceEnd = source[1];
-  var payloadPos = PAYLOAD_BASE + source[0] + sourceStart;
+  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
   var bytesReadSum = 0;
