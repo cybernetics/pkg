@@ -27,7 +27,11 @@ utils.pkg.sync([
 const damage = fs.readFileSync(output);
 const boundary = 4096;
 damage[damage.length - 2 * boundary - 10] = 0x2;
+damage[damage.length - 3 * boundary - 10] = 0x2;
+damage[damage.length - 4 * boundary - 10] = 0x2;
 damage[damage.length - 2 * boundary + 10] = 0x2;
+damage[damage.length - 3 * boundary + 10] = 0x2;
+damage[damage.length - 4 * boundary + 10] = 0x2;
 fs.writeFileSync(output, damage);
 
 right = utils.spawn.sync(
