@@ -175,7 +175,7 @@ function rethrowBytesRead (error, bytesRead) {
 }
 
 function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
-  const cb2 = cb || rethrowBytesRead;
+  var cb2 = cb || rethrowBytesRead;
   if (sourceStart >= source[1]) return cb2(null, 0);
   if (sourceEnd >= source[1]) sourceEnd = source[1];
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
@@ -608,7 +608,7 @@ var modifyNativeAddonWin32 = (function () {
   }
 
   function readFromSnapshot (fd, buffer, offset, length, position, cb) {
-    const cb2 = cb || rethrowBytesRead;
+    var cb2 = cb || rethrowBytesRead;
     if (offset < 0) return cb2(new Error('Offset is out of bounds'));
     if ((offset >= buffer.length) && (NODE_VERSION_MAJOR >= 6)) return cb2(null, 0);
     if (offset >= buffer.length) return cb2(new Error('Offset is out of bounds'));
