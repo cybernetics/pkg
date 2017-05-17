@@ -165,14 +165,29 @@ function findNativeAddon (path) {
 // PAYLOAD /////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////
 
-function payloadCopySync (source, target, targetStart, sourceStart, sourceEnd) {
-  if (sourceStart >= source[1]) return 0;
+function rethrow (error) {
+  if (error) throw error;
+}
+
+function rethrowBytesRead (error, bytesRead) {
+  if (error) throw error;
+  return bytesRead;
+}
+
+function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
+  const cb2 = cb || rethrowBytesRead;
+  if (sourceStart >= source[1]) return cb2(null, 0);
   if (sourceEnd >= source[1]) sourceEnd = source[1];
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
-  return require('fs').readSync(
-    EXECPATH_FD, target, targetPos, targetEnd - targetPos, payloadPos);
+  if (cb) {
+    require('fs').read(EXECPATH_FD,
+      target, targetPos, targetEnd - targetPos, payloadPos, cb);
+  } else {
+    return require('fs').readSync(EXECPATH_FD,
+      target, targetPos, targetEnd - targetPos, payloadPos);
+  }
 }
 
 function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEnd) {
@@ -181,16 +196,16 @@ function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEn
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
-  var bytesReadSum = 0;
-  var bytesRead;
+  var bytesRead = 0;
+  var chunkSize;
   do {
-    bytesRead = require('fs').readSync(
-      EXECPATH_FD, target, targetPos, targetEnd - targetPos, payloadPos);
-    payloadPos += bytesRead;
-    targetPos += bytesRead;
-    bytesReadSum += bytesRead;
-  } while (bytesRead !== 0 && targetPos < targetEnd);
-  return bytesReadSum;
+    chunkSize = require('fs').readSync(EXECPATH_FD,
+      target, targetPos, targetEnd - targetPos, payloadPos);
+    payloadPos += chunkSize;
+    targetPos += chunkSize;
+    bytesRead += chunkSize;
+  } while (chunkSize !== 0 && targetPos < targetEnd);
+  return bytesRead;
 }
 
 function payloadFileSync (pointer) {
@@ -477,10 +492,6 @@ var modifyNativeAddonWin32 = (function () {
     }
   }
 
-  function rethrow (error) {
-    if (error) throw error;
-  }
-
   function maybeCallback (args) {
     var cb = args[args.length - 1];
     return typeof cb === 'function' ? cb : rethrow;
@@ -576,27 +587,40 @@ var modifyNativeAddonWin32 = (function () {
   // read //////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function readFromSnapshotSub (dock, entityContent, buffer, offset, length, position) {
-    var p = position;
-    if ((p === null) || (typeof p === 'undefined')) p = dock.position;
-    var result = payloadCopySync(entityContent, buffer, offset, p, p + length);
-    dock.position = p + result;
-    return result;
+  function readFromSnapshotSub (dock, entityContent, buffer, offset, length, position, cb) {
+    var p;
+    if ((position !== null) && (position !== undefined)) {
+      p = position;
+    } else {
+      p = dock.position;
+    }
+    if (cb) {
+      payloadCopy(entityContent, buffer, offset, p, p + length, function (error, bytesRead, buffer2) {
+        if (error) return cb(error);
+        dock.position = p + bytesRead;
+        cb(null, bytesRead, buffer2);
+      });
+    } else {
+      var bytesRead = payloadCopy(entityContent, buffer, offset, p, p + length);
+      dock.position = p + bytesRead;
+      return bytesRead;
+    }
   }
 
-  function readFromSnapshot (fd, buffer, offset, length, position) {
-    if (offset < 0) throw new Error('Offset is out of bounds');
-    if ((offset >= buffer.length) && (NODE_VERSION_MAJOR >= 6)) return 0;
-    if (offset >= buffer.length) throw new Error('Offset is out of bounds');
-    if (offset + length > buffer.length) throw new Error('Length extends beyond buffer');
+  function readFromSnapshot (fd, buffer, offset, length, position, cb) {
+    const cb2 = cb || rethrowBytesRead;
+    if (offset < 0) return cb2(new Error('Offset is out of bounds'));
+    if ((offset >= buffer.length) && (NODE_VERSION_MAJOR >= 6)) return cb2(null, 0);
+    if (offset >= buffer.length) return cb2(new Error('Offset is out of bounds'));
+    if (offset + length > buffer.length) return cb2(new Error('Length extends beyond buffer'));
 
     var dock = docks[fd];
     var entity = dock.entity;
     var entityLinks = entity[STORE_LINKS];
-    if (entityLinks) throw error_EISDIR(dock.path);
+    if (entityLinks) return cb2(error_EISDIR(dock.path));
     var entityContent = entity[STORE_CONTENT];
-    if (entityContent) return readFromSnapshotSub(dock, entityContent, buffer, offset, length, position);
-    throw new Error('UNEXPECTED-15');
+    if (entityContent) return readFromSnapshotSub(dock, entityContent, buffer, offset, length, position, cb);
+    return cb2(new Error('UNEXPECTED-15'));
   }
 
   fs.readSync = function (fd, buffer, offset, length, position) {
@@ -613,18 +637,7 @@ var modifyNativeAddonWin32 = (function () {
     }
 
     var callback = maybeCallback(arguments);
-    try {
-      var r = readFromSnapshot(
-        fd, buffer, offset, length, position
-      );
-      process.nextTick(function () {
-        callback(null, r, buffer);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    readFromSnapshot(fd, buffer, offset, length, position, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
@@ -1091,7 +1104,7 @@ var modifyNativeAddonWin32 = (function () {
     // console.log("accessFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
     if (!entity) throw error_ENOENT('File or directory', path);
-    return undefined;
+    return null;
   }
 
   fs.accessSync = function (path) {
