@@ -1104,7 +1104,7 @@ var modifyNativeAddonWin32 = (function () {
     // console.log("accessFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
     if (!entity) throw error_ENOENT('File or directory', path);
-    return null;
+    return undefined;
   }
 
   fs.accessSync = function (path) {
