@@ -477,15 +477,13 @@ var modifyNativeAddonWin32 = (function () {
     }
   }
 
-  function rethrow () {
-    return function (error) {
-      if (error) throw error;
-    };
+  function rethrow (error) {
+    if (error) throw error;
   }
 
   function maybeCallback (args) {
     var cb = args[args.length - 1];
-    return typeof cb === 'function' ? cb : rethrow();
+    return typeof cb === 'function' ? cb : rethrow;
   }
 
   function error_ENOENT (fileOrDirectory, path) { // eslint-disable-line camelcase
