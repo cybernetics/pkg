@@ -171,6 +171,16 @@ function payloadCopySync (source, target, targetStart, sourceStart, sourceEnd) {
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
+  return require('fs').readSync(
+    EXECPATH_FD, target, targetPos, targetEnd - targetPos, payloadPos);
+}
+
+function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEnd) {
+  if (sourceStart >= source[1]) return 0;
+  if (sourceEnd >= source[1]) sourceEnd = source[1];
+  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
+  var targetPos = targetStart;
+  var targetEnd = targetStart + sourceEnd - sourceStart;
   var bytesReadSum = 0;
   var bytesRead;
   do {
@@ -185,7 +195,7 @@ function payloadCopySync (source, target, targetStart, sourceStart, sourceEnd) {
 
 function payloadFileSync (pointer) {
   var target = new Buffer(pointer[1]);
-  payloadCopySync(pointer, target, 0, 0, target.length);
+  payloadCopyManySync(pointer, target, 0, 0, target.length);
   return target;
 }
 
