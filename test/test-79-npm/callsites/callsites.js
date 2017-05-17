@@ -2,7 +2,10 @@
 
 var path = require('path');
 var callsites = require('callsites');
-var fn = callsites()[0].getFileName();
-if (path.parse(fn).base === 'callsites.js') {
+var fns = callsites().map(function (c) {
+  return c.getFileName();
+});
+if (fns[1] === 'pkg/prelude/bootstrap.js' ||
+    path.basename(fns[0]) === 'callsites.js') {
   console.log('ok');
 }

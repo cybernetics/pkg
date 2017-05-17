@@ -29,5 +29,7 @@ right = utils.spawn.sync(
 right = right.stderr.split('\n');
 var a = right[0];
 var b = right[2].split('(')[1].split(')')[0].split(':')[0];
+var c = right[3].split('(')[1].split(')')[0].split(':')[0];
 assert.equal(a, b);
+assert.equal(c, 'pkg/prelude/bootstrap.js');
 utils.vacuum.sync(output);
