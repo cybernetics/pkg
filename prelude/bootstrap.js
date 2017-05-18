@@ -1,6 +1,7 @@
 /* eslint-disable no-multi-spaces */
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable prefer-rest-params */
+/* eslint-disable prefer-spread */
 
 /* global EXECPATH_FD */
 /* global PAYLOAD_POSITION */
@@ -162,8 +163,32 @@ function findNativeAddon (path) {
 }
 
 // /////////////////////////////////////////////////////////////////
-// PAYLOAD /////////////////////////////////////////////////////////
+// FLOW UTILS //////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////
+
+function asap (cb) {
+  process.nextTick(cb);
+}
+
+function dezalgo (cb) {
+  if (!cb) return cb;
+
+  var sync = true;
+  asap(function () {
+    sync = false;
+  });
+
+  return function zalgoSafe () {
+    var args = arguments;
+    if (sync) {
+      asap(function () {
+        cb.apply(undefined, args);
+      });
+    } else {
+      cb.apply(undefined, args);
+    }
+  };
+}
 
 function rethrow (error) {
   if (error) throw error;
@@ -173,6 +198,10 @@ function rethrowBytesRead (error, bytesRead) {
   if (error) throw error;
   return bytesRead;
 }
+
+// /////////////////////////////////////////////////////////////////
+// PAYLOAD /////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////
 
 function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
   var cb2 = cb || rethrowBytesRead;
@@ -636,7 +665,7 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.read.apply(fs, arguments);
     }
 
-    var callback = maybeCallback(arguments);
+    var callback = dezalgo(maybeCallback(arguments));
     readFromSnapshot(fd, buffer, offset, length, position, callback);
   };
 
