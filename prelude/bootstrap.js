@@ -216,21 +216,19 @@ function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
 }
 
 function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEnd) {
-  if (sourceStart >= source[1]) return 0;
+  if (sourceStart >= source[1]) return;
   if (sourceEnd >= source[1]) sourceEnd = source[1];
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
-  var bytesRead = 0;
   var chunkSize;
-  do {
+  while (true) {
     chunkSize = require('fs').readSync(EXECPATH_FD,
       target, targetPos, targetEnd - targetPos, payloadPos);
     payloadPos += chunkSize;
     targetPos += chunkSize;
-    bytesRead += chunkSize;
-  } while (chunkSize !== 0 && targetPos < targetEnd);
-  return bytesRead;
+    if (!(chunkSize !== 0 && targetPos < targetEnd)) break;
+  }
 }
 
 function payloadFileSync (pointer) {
