@@ -561,19 +561,25 @@ var modifyNativeAddonWin32 = (function () {
   // open //////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function openFromSnapshot (path_) {
+  function openFromSnapshot (path_, cb) {
+    var cb2 = cb || rethrow;
     var path = normalizePath(path_);
     // console.log("openFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
-    if (!entity) throw error_ENOENT('File or directory', path);
+    if (!entity) return cb2(error_ENOENT('File or directory', path));
+    var dock = { path: path, entity: entity, position: 0 };
     var nullDevice = windows ? '\\\\.\\NUL' : '/dev/null';
-    var fd = ancestor.openSync.call(fs, nullDevice, 'r');
-    var dock = docks[fd] = {};
-    dock.fd = fd;
-    dock.path = path;
-    dock.entity = entity;
-    dock.position = 0;
-    return fd;
+    if (cb) {
+      ancestor.open.call(fs, nullDevice, 'r', function (error, fd) {
+        if (error) return cb(error);
+        docks[fd] = dock;
+        cb(null, fd);
+      });
+    } else {
+      var fd = ancestor.openSync.call(fs, nullDevice, 'r');
+      docks[fd] = dock;
+      return fd;
+    }
   }
 
   fs.openSync = function (path) {
@@ -595,17 +601,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.open.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = openFromSnapshot(path);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    openFromSnapshot(path, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
