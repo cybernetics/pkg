@@ -190,13 +190,9 @@ function dezalgo (cb) {
   };
 }
 
-function rethrow (error) {
+function rethrow (error, arg) {
   if (error) throw error;
-}
-
-function rethrowBytesRead (error, bytesRead) {
-  if (error) throw error;
-  return bytesRead;
+  return arg;
 }
 
 // /////////////////////////////////////////////////////////////////
@@ -204,7 +200,7 @@ function rethrowBytesRead (error, bytesRead) {
 // /////////////////////////////////////////////////////////////////
 
 function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
-  var cb2 = cb || rethrowBytesRead;
+  var cb2 = cb || rethrow;
   if (sourceStart >= source[1]) return cb2(null, 0);
   if (sourceEnd >= source[1]) sourceEnd = source[1];
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
@@ -637,7 +633,7 @@ var modifyNativeAddonWin32 = (function () {
   }
 
   function readFromSnapshot (fd, buffer, offset, length, position, cb) {
-    var cb2 = cb || rethrowBytesRead;
+    var cb2 = cb || rethrow;
     if (offset < 0) return cb2(new Error('Offset is out of bounds'));
     if ((offset >= buffer.length) && (NODE_VERSION_MAJOR >= 6)) return cb2(null, 0);
     if (offset >= buffer.length) return cb2(new Error('Offset is out of bounds'));
