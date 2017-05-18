@@ -699,9 +699,13 @@ var modifyNativeAddonWin32 = (function () {
   // close /////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function closeFromSnapshot (fd) {
-    ancestor.closeSync.call(fs, fd);
+  function closeFromSnapshot (fd, cb) {
     delete docks[fd];
+    if (cb) {
+      ancestor.close.call(fs, fd, cb);
+    } else {
+      return ancestor.closeSync.call(fs, fd);
+    }
   }
 
   fs.closeSync = function (fd) {
@@ -717,17 +721,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.close.apply(fs, arguments);
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = closeFromSnapshot(fd);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    closeFromSnapshot(fd, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
