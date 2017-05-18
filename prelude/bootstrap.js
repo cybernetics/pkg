@@ -609,7 +609,7 @@ var modifyNativeAddonWin32 = (function () {
   // read //////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function readFromSnapshotSub (dock, entityContent, buffer, offset, length, position, cb) {
+  function readFromSnapshotSub (entityContent, dock, buffer, offset, length, position, cb) {
     var p;
     if ((position !== null) && (position !== undefined)) {
       p = position;
@@ -641,7 +641,7 @@ var modifyNativeAddonWin32 = (function () {
     var entityLinks = entity[STORE_LINKS];
     if (entityLinks) return cb2(error_EISDIR(dock.path));
     var entityContent = entity[STORE_CONTENT];
-    if (entityContent) return readFromSnapshotSub(dock, entityContent, buffer, offset, length, position, cb);
+    if (entityContent) return readFromSnapshotSub(entityContent, dock, buffer, offset, length, position, cb);
     return cb2(new Error('UNEXPECTED-15'));
   }
 
@@ -734,17 +734,26 @@ var modifyNativeAddonWin32 = (function () {
     }
   }
 
-  function readFileFromSnapshot (path_) {
+  function readFileFromSnapshotSub (entityContent, cb) {
+    if (cb) {
+      return cb(null, payloadFileSync(entityContent));
+    } else {
+      return payloadFileSync(entityContent);
+    }
+  }
+
+  function readFileFromSnapshot (path_, cb) {
+    var cb2 = cb || rethrow;
     var path = normalizePath(path_);
     // console.log("readFileFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
-    if (!entity) throw error_ENOENT('File', path);
+    if (!entity) return cb2(error_ENOENT('File', path));
     var entityLinks = entity[STORE_LINKS];
-    if (entityLinks) throw error_EISDIR(path);
+    if (entityLinks) return cb2(error_EISDIR(path));
     var entityContent = entity[STORE_CONTENT];
-    if (entityContent) return payloadFileSync(entityContent);
+    if (entityContent) return readFileFromSnapshotSub(entityContent, cb);
     var entityCode = entity[STORE_CODE];
-    if (entityCode) return new Buffer('source-code-not-available');
+    if (entityCode) return cb2(null, new Buffer('source-code-not-available'));
 
     // why return empty buffer?
     // otherwise this error will arise:
@@ -758,7 +767,7 @@ var modifyNativeAddonWin32 = (function () {
     //     at startup (node.js:140:18)
     //     at node.js:1001:3
 
-    throw new Error('UNEXPECTED-20');
+    return cb2(new Error('UNEXPECTED-20'));
   }
 
   fs.readFileSync = function (path, options_) {
@@ -803,18 +812,12 @@ var modifyNativeAddonWin32 = (function () {
     var encoding = options.encoding;
     assertEncoding(encoding);
 
-    var callback = maybeCallback(arguments);
-    try {
-      var buffer = readFileFromSnapshot(path);
+    var callback = dezalgo(maybeCallback(arguments));
+    readFileFromSnapshot(path, function (error, buffer) {
+      if (error) return callback(error);
       if (encoding) buffer = buffer.toString(encoding);
-      process.nextTick(function () {
-        callback(null, buffer);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+      callback(null, buffer);
+    });
   };
 
   // ///////////////////////////////////////////////////////////////
