@@ -199,7 +199,7 @@ function rethrow (error, arg) {
 // PAYLOAD /////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////
 
-function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
+function payloadCopyUni (source, target, targetStart, sourceStart, sourceEnd, cb) {
   var cb2 = cb || rethrow;
   if (sourceStart >= source[1]) return cb2(null, 0);
   if (sourceEnd >= source[1]) sourceEnd = source[1];
@@ -213,6 +213,28 @@ function payloadCopy (source, target, targetStart, sourceStart, sourceEnd, cb) {
     return require('fs').readSync(EXECPATH_FD,
       target, targetPos, targetEnd - targetPos, payloadPos);
   }
+}
+
+function payloadCopyMany (source, target, targetStart, sourceStart, sourceEnd, cb) {
+  // this is an assert. only-cb unlike universal payloadCopyUni
+  if (!cb) throw new Error('payloadCopyMany should have a cb');
+  if (sourceStart >= source[1]) return cb();
+  if (sourceEnd >= source[1]) sourceEnd = source[1];
+  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
+  var targetPos = targetStart;
+  var targetEnd = targetStart + sourceEnd - sourceStart;
+  require('fs').read(EXECPATH_FD,
+    target, targetPos, targetEnd - targetPos, payloadPos,
+  function (error, chunkSize) {
+    if (error) return cb(error);
+    sourceStart += chunkSize;
+    targetPos += chunkSize;
+    if (chunkSize !== 0 && targetPos < targetEnd) {
+      payloadCopyMany(source, target, targetPos, sourceStart, sourceEnd, cb);
+    } else {
+      return cb();
+    }
+  });
 }
 
 function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEnd) {
@@ -229,6 +251,14 @@ function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEn
     targetPos += chunkSize;
     if (!(chunkSize !== 0 && targetPos < targetEnd)) break;
   }
+}
+
+function payloadFile (pointer, cb) {
+  var target = new Buffer(pointer[1]);
+  payloadCopyMany(pointer, target, 0, 0, target.length, function (error) {
+    if (error) return cb(error);
+    cb(null, target);
+  });
 }
 
 function payloadFileSync (pointer) {
@@ -615,13 +645,13 @@ var modifyNativeAddonWin32 = (function () {
       p = dock.position;
     }
     if (cb) {
-      payloadCopy(entityContent, buffer, offset, p, p + length, function (error, bytesRead, buffer2) {
+      payloadCopyUni(entityContent, buffer, offset, p, p + length, function (error, bytesRead, buffer2) {
         if (error) return cb(error);
         dock.position = p + bytesRead;
         cb(null, bytesRead, buffer2);
       });
     } else {
-      var bytesRead = payloadCopy(entityContent, buffer, offset, p, p + length);
+      var bytesRead = payloadCopyUni(entityContent, buffer, offset, p, p + length);
       dock.position = p + bytesRead;
       return bytesRead;
     }
@@ -734,7 +764,7 @@ var modifyNativeAddonWin32 = (function () {
 
   function readFileFromSnapshotSub (entityContent, cb) {
     if (cb) {
-      return cb(null, payloadFileSync(entityContent));
+      payloadFile(entityContent, cb);
     } else {
       return payloadFileSync(entityContent);
     }
