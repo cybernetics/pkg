@@ -673,8 +673,9 @@ var modifyNativeAddonWin32 = (function () {
   // write /////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function writeToSnapshot () {
-    throw new Error('Cannot write to packaged file');
+  function writeToSnapshot (cb) {
+    var cb2 = cb || rethrow;
+    return cb2(new Error('Cannot write to packaged file'));
   }
 
   fs.writeSync = function (fd) {
@@ -690,17 +691,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.write.apply(fs, arguments);
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = writeToSnapshot();
-      process.nextTick(function () {
-        callback(null, r, buffer);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    writeToSnapshot(callback);
   };
 
   // ///////////////////////////////////////////////////////////////
