@@ -215,14 +215,10 @@ function payloadCopyUni (source, target, targetStart, sourceStart, sourceEnd, cb
   }
 }
 
-function payloadCopyMany (source, target, targetStart, sourceStart, sourceEnd, cb) {
-  // this is an assert. only-cb unlike universal payloadCopyUni
-  if (!cb) throw new Error('payloadCopyMany should have a cb');
-  if (sourceStart >= source[1]) return cb();
-  if (sourceEnd >= source[1]) sourceEnd = source[1];
+function payloadCopyMany (source, target, targetStart, sourceStart, cb) {
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
-  var targetEnd = targetStart + sourceEnd - sourceStart;
+  var targetEnd = targetStart + source[1] - sourceStart;
   require('fs').read(EXECPATH_FD,
     target, targetPos, targetEnd - targetPos, payloadPos,
   function (error, chunkSize) {
@@ -230,19 +226,17 @@ function payloadCopyMany (source, target, targetStart, sourceStart, sourceEnd, c
     sourceStart += chunkSize;
     targetPos += chunkSize;
     if (chunkSize !== 0 && targetPos < targetEnd) {
-      payloadCopyMany(source, target, targetPos, sourceStart, sourceEnd, cb);
+      payloadCopyMany(source, target, targetPos, sourceStart, cb);
     } else {
       return cb();
     }
   });
 }
 
-function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEnd) {
-  if (sourceStart >= source[1]) return;
-  if (sourceEnd >= source[1]) sourceEnd = source[1];
+function payloadCopyManySync (source, target, targetStart, sourceStart) {
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
-  var targetEnd = targetStart + sourceEnd - sourceStart;
+  var targetEnd = targetStart + source[1] - sourceStart;
   var chunkSize;
   while (true) {
     chunkSize = require('fs').readSync(EXECPATH_FD,
@@ -255,7 +249,7 @@ function payloadCopyManySync (source, target, targetStart, sourceStart, sourceEn
 
 function payloadFile (pointer, cb) {
   var target = new Buffer(pointer[1]);
-  payloadCopyMany(pointer, target, 0, 0, target.length, function (error) {
+  payloadCopyMany(pointer, target, 0, 0, function (error) {
     if (error) return cb(error);
     cb(null, target);
   });
@@ -263,7 +257,7 @@ function payloadFile (pointer, cb) {
 
 function payloadFileSync (pointer) {
   var target = new Buffer(pointer[1]);
-  payloadCopyManySync(pointer, target, 0, 0, target.length);
+  payloadCopyManySync(pointer, target, 0, 0);
   return target;
 }
 
