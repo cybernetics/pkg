@@ -853,18 +853,31 @@ var modifyNativeAddonWin32 = (function () {
   // readdir ///////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function readdirFromSnapshot (path_) {
+  function readdirFromSnapshotSub (entityLinks, path, cb) {
+    if (cb) {
+      payloadFile(entityLinks, function (error, buffer) {
+        if (error) return cb(error);
+        cb(null, JSON.parse(buffer).concat(readdirMountpoints(path)));
+      });
+    } else {
+      var buffer = payloadFileSync(entityLinks);
+      return JSON.parse(buffer).concat(readdirMountpoints(path));
+    }
+  }
+
+  function readdirFromSnapshot (path_, cb) {
+    var cb2 = cb || rethrow;
     var path = normalizePath(path_);
     // console.log("readdirFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
-    if (!entity) throw error_ENOENT('Directory', path);
+    if (!entity) return cb2(error_ENOENT('Directory', path));
     var entityCode = entity[STORE_CODE];
-    if (entityCode) throw error_ENOTDIR(path);
+    if (entityCode) return cb2(error_ENOTDIR(path));
     var entityContent = entity[STORE_CONTENT];
-    if (entityContent) throw error_ENOTDIR(path);
+    if (entityContent) return cb2(error_ENOTDIR(path));
     var entityLinks = entity[STORE_LINKS];
-    if (entityLinks) return JSON.parse(payloadFileSync(entityLinks)).concat(readdirMountpoints(path));
-    throw new Error('UNEXPECTED-25');
+    if (entityLinks) return readdirFromSnapshotSub(entityLinks, path, cb);
+    return cb2(new Error('UNEXPECTED-25'));
   }
 
   fs.readdirSync = function (path) {
@@ -886,17 +899,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.readdir.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = readdirFromSnapshot(path);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    readdirFromSnapshot(path, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
