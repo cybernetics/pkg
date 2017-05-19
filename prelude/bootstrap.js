@@ -932,11 +932,8 @@ var modifyNativeAddonWin32 = (function () {
       // app should not know real file name
     }
 
-    var callback = maybeCallback(arguments);
-    var r = realpathFromSnapshot(path);
-    process.nextTick(function () {
-      callback(null, r);
-    });
+    var callback = dezalgo(maybeCallback(arguments));
+    callback(null, realpathFromSnapshot(path));
   };
 
   // ///////////////////////////////////////////////////////////////
