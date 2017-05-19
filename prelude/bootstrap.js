@@ -219,10 +219,8 @@ function payloadCopyMany (source, target, targetStart, sourceStart, cb) {
   var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + source[1] - sourceStart;
-  var bytesToRead = targetEnd - targetPos;
-  if (bytesToRead > 17) bytesToRead = 17;
   require('fs').read(EXECPATH_FD,
-    target, targetPos, bytesToRead, payloadPos,
+    target, targetPos, targetEnd - targetPos, payloadPos,
   function (error, chunkSize) {
     if (error) return cb(error);
     sourceStart += chunkSize;
@@ -241,10 +239,8 @@ function payloadCopyManySync (source, target, targetStart, sourceStart) {
   var targetEnd = targetStart + source[1] - sourceStart;
   var chunkSize;
   while (true) {
-    var bytesToRead = targetEnd - targetPos;
-    if (bytesToRead > 17) bytesToRead = 17;
     chunkSize = require('fs').readSync(EXECPATH_FD,
-      target, targetPos, bytesToRead, payloadPos);
+      target, targetPos, targetEnd - targetPos, payloadPos);
     payloadPos += chunkSize;
     targetPos += chunkSize;
     if (!(chunkSize !== 0 && targetPos < targetEnd)) break;
