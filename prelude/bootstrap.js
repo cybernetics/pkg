@@ -1106,11 +1106,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.exists.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    var r = existsFromSnapshot(path);
-    process.nextTick(function () {
-      callback(r);
-    });
+    var callback = dezalgo(maybeCallback(arguments));
+    callback(existsFromSnapshot(path));
   };
 
   // ///////////////////////////////////////////////////////////////
