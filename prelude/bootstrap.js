@@ -1042,17 +1042,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.lstat.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = statFromSnapshot(path);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    statFromSnapshot(path, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
