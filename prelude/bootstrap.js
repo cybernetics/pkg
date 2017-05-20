@@ -591,6 +591,7 @@ var modifyNativeAddonWin32 = (function () {
     if (!entity) return cb2(error_ENOENT('File or directory', path));
     var dock = { path: path, entity: entity, position: 0 };
     var nullDevice = windows ? '\\\\.\\NUL' : '/dev/null';
+
     if (cb) {
       ancestor.open.call(fs, nullDevice, 'r', function (error, fd) {
         if (error) return cb(error);
@@ -716,11 +717,8 @@ var modifyNativeAddonWin32 = (function () {
 
   function closeFromSnapshot (fd, cb) {
     delete docks[fd];
-    if (cb) {
-      ancestor.close.call(fs, fd, cb);
-    } else {
-      return ancestor.closeSync.call(fs, fd);
-    }
+    if (!cb) return ancestor.closeSync.call(fs, fd);
+    ancestor.close.call(fs, fd, cb);
   }
 
   fs.closeSync = function (fd) {
@@ -757,11 +755,8 @@ var modifyNativeAddonWin32 = (function () {
   }
 
   function readFileFromSnapshotSub (entityContent, cb) {
-    if (cb) {
-      payloadFile(entityContent, cb);
-    } else {
-      return payloadFileSync(entityContent);
-    }
+    if (!cb) return payloadFileSync(entityContent);
+    payloadFile(entityContent, cb);
   }
 
   function readFileFromSnapshot (path_, cb) {
