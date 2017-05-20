@@ -965,20 +965,35 @@ var modifyNativeAddonWin32 = (function () {
     return s;
   }
 
-  function findNativeAddonForStat (path) {
+  function findNativeAddonForStat (path, cb) {
+    var cb2 = cb || rethrow;
     var foundPath = findNativeAddonSync(path);
-    if (!foundPath) throw error_ENOENT('File or directory', path);
-    return ancestor.statSync.call(fs, foundPath);
+    if (!foundPath) return cb2(error_ENOENT('File or directory', path));
+    if (!cb) return ancestor.statSync.call(fs, foundPath);
+    ancestor.stat.call(fs, foundPath, cb);
   }
 
-  function statFromSnapshot (path_) {
+  function statFromSnapshotSub (entityStat, cb) {
+    if (cb) {
+      payloadFile(entityStat, function (error, buffer) {
+        if (error) return cb(error);
+        cb(null, restore(JSON.parse(buffer)));
+      });
+    } else {
+      var buffer = payloadFileSync(entityStat);
+      return restore(JSON.parse(buffer));
+    }
+  }
+
+  function statFromSnapshot (path_, cb) {
+    var cb2 = cb || rethrow;
     var path = normalizePath(path_);
     // console.log("statFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
-    if (!entity) return findNativeAddonForStat(path);
+    if (!entity) return findNativeAddonForStat(path, cb);
     var entityStat = entity[STORE_STAT];
-    if (entityStat) return restore(JSON.parse(payloadFileSync(entityStat)));
-    throw new Error('UNEXPECTED-35');
+    if (entityStat) return statFromSnapshotSub(entityStat, cb);
+    return cb2(new Error('UNEXPECTED-35'));
   }
 
   fs.statSync = function (path) {
@@ -1000,17 +1015,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.stat.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = statFromSnapshot(path);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    statFromSnapshot(path, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
