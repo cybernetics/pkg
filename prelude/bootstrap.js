@@ -1050,12 +1050,12 @@ var modifyNativeAddonWin32 = (function () {
   // fstat /////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function fstatFromSnapshot (fd) {
-    var dock = docks[fd];
-    var entity = dock.entity;
+  function fstatFromSnapshot (fd, cb) {
+    var cb2 = cb || rethrow;
+    var entity = docks[fd].entity;
     var entityStat = entity[STORE_STAT];
-    if (entityStat) return restore(JSON.parse(payloadFileSync(entityStat)));
-    throw new Error('UNEXPECTED-40');
+    if (entityStat) return statFromSnapshotSub(entityStat, cb);
+    return cb2(new Error('UNEXPECTED-40'));
   }
 
   fs.fstatSync = function (fd) {
@@ -1071,17 +1071,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.fstat.apply(fs, arguments);
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = fstatFromSnapshot(fd);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    fstatFromSnapshot(fd, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
