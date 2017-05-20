@@ -1114,12 +1114,13 @@ var modifyNativeAddonWin32 = (function () {
   // access ////////////////////////////////////////////////////////
   // ///////////////////////////////////////////////////////////////
 
-  function accessFromSnapshot (path_) {
+  function accessFromSnapshot (path_, cb) {
+    var cb2 = cb || rethrow;
     var path = normalizePath(path_);
     // console.log("accessFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
-    if (!entity) throw error_ENOENT('File or directory', path);
-    return undefined;
+    if (!entity) return cb2(error_ENOENT('File or directory', path));
+    return cb2(null, undefined);
   }
 
   fs.accessSync = function (path) {
@@ -1141,17 +1142,8 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor.access.apply(fs, translateNth(arguments, 0, path));
     }
 
-    var callback = maybeCallback(arguments);
-    try {
-      var r = accessFromSnapshot(path);
-      process.nextTick(function () {
-        callback(null, r);
-      });
-    } catch (error) {
-      process.nextTick(function () {
-        callback(error);
-      });
-    }
+    var callback = dezalgo(maybeCallback(arguments));
+    accessFromSnapshot(path, callback);
   };
 
   // ///////////////////////////////////////////////////////////////
