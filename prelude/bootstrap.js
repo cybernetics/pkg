@@ -970,10 +970,10 @@ var modifyNativeAddonWin32 = (function () {
     return s;
   }
 
-  function findNativeAddonForStat (path_) {
-    var path = findNativeAddonSync(path_);
-    if (!path) throw error_ENOENT('File or directory', path_);
-    return ancestor.statSync.call(fs, path);
+  function findNativeAddonForStat (path) {
+    var foundPath = findNativeAddonSync(path);
+    if (!foundPath) throw error_ENOENT('File or directory', path);
+    return ancestor.statSync.call(fs, foundPath);
   }
 
   function statFromSnapshot (path_) {
