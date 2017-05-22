@@ -199,29 +199,35 @@ function rethrow (error, arg) {
 // PAYLOAD /////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////
 
+var readPayload = function (buffer, offset, length, position, callback) {
+  require('fs').read(EXECPATH_FD,
+    buffer, offset, length, PAYLOAD_POSITION + position, callback);
+};
+
+var readPayloadSync = function (buffer, offset, length, position) {
+  return require('fs').readSync(EXECPATH_FD,
+    buffer, offset, length, PAYLOAD_POSITION + position);
+};
+
 function payloadCopyUni (source, target, targetStart, sourceStart, sourceEnd, cb) {
   var cb2 = cb || rethrow;
   if (sourceStart >= source[1]) return cb2(null, 0);
   if (sourceEnd >= source[1]) sourceEnd = source[1];
-  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
+  var payloadPos = source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + sourceEnd - sourceStart;
   if (cb) {
-    require('fs').read(EXECPATH_FD,
-      target, targetPos, targetEnd - targetPos, payloadPos, cb);
+    readPayload(target, targetPos, targetEnd - targetPos, payloadPos, cb);
   } else {
-    return require('fs').readSync(EXECPATH_FD,
-      target, targetPos, targetEnd - targetPos, payloadPos);
+    return readPayloadSync(target, targetPos, targetEnd - targetPos, payloadPos);
   }
 }
 
 function payloadCopyMany (source, target, targetStart, sourceStart, cb) {
-  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
+  var payloadPos = source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + source[1] - sourceStart;
-  require('fs').read(EXECPATH_FD,
-    target, targetPos, targetEnd - targetPos, payloadPos,
-  function (error, chunkSize) {
+  readPayload(target, targetPos, targetEnd - targetPos, payloadPos, function (error, chunkSize) {
     if (error) return cb(error);
     sourceStart += chunkSize;
     targetPos += chunkSize;
@@ -234,13 +240,12 @@ function payloadCopyMany (source, target, targetStart, sourceStart, cb) {
 }
 
 function payloadCopyManySync (source, target, targetStart, sourceStart) {
-  var payloadPos = PAYLOAD_POSITION + source[0] + sourceStart;
+  var payloadPos = source[0] + sourceStart;
   var targetPos = targetStart;
   var targetEnd = targetStart + source[1] - sourceStart;
   var chunkSize;
   while (true) {
-    chunkSize = require('fs').readSync(EXECPATH_FD,
-      target, targetPos, targetEnd - targetPos, payloadPos);
+    chunkSize = readPayloadSync(target, targetPos, targetEnd - targetPos, payloadPos);
     payloadPos += chunkSize;
     targetPos += chunkSize;
     if (!(chunkSize !== 0 && targetPos < targetEnd)) break;
