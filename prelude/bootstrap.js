@@ -5,6 +5,7 @@
 
 /* global EXECPATH_FD */
 /* global PAYLOAD_POSITION */
+/* global PAYLOAD_SIZE */
 /* global REQUIRE_COMMON */
 /* global VIRTUAL_FILESYSTEM */
 /* global DEFAULT_ENTRYPOINT */
@@ -264,6 +265,22 @@ function payloadFileSync (pointer) {
   var target = new Buffer(pointer[1]);
   payloadCopyManySync(pointer, target, 0, 0);
   return target;
+}
+
+if (PAYLOAD_SIZE < 20 * 1024 * 1024) {
+  var PAYLOAD_BLOB = payloadFileSync([ 0, PAYLOAD_SIZE ]);
+
+  readPayload = function (buffer, offset, length, position, callback) {
+    var chunkSize = PAYLOAD_BLOB.copy(buffer, offset, position, position + length);
+    if (chunkSize !== length) throw new Error('UNEXPECTED-CHUNK-SIZE');
+    callback(null, chunkSize, buffer);
+  };
+
+  readPayloadSync = function (buffer, offset, length, position) {
+    var chunkSize = PAYLOAD_BLOB.copy(buffer, offset, position, position + length);
+    if (chunkSize !== length) throw new Error('UNEXPECTED-CHUNK-SIZE');
+    return chunkSize;
+  };
 }
 
 // /////////////////////////////////////////////////////////////////
