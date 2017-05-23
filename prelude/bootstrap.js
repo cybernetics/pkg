@@ -14,7 +14,7 @@
 var common = {};
 REQUIRE_COMMON(common);
 
-var STORE_CODE = common.STORE_CODE;
+var STORE_BLOB = common.STORE_BLOB;
 var STORE_CONTENT = common.STORE_CONTENT;
 var STORE_LINKS = common.STORE_LINKS;
 var STORE_STAT = common.STORE_STAT;
@@ -774,8 +774,8 @@ var modifyNativeAddonWin32 = (function () {
     if (entityLinks) return cb2(error_EISDIR(path));
     var entityContent = entity[STORE_CONTENT];
     if (entityContent) return readFileFromSnapshotSub(entityContent, cb);
-    var entityCode = entity[STORE_CODE];
-    if (entityCode) return cb2(null, new Buffer('source-code-not-available'));
+    var entityBlob = entity[STORE_BLOB];
+    if (entityBlob) return cb2(null, new Buffer('source-code-not-available'));
 
     // why return empty buffer?
     // otherwise this error will arise:
@@ -871,8 +871,8 @@ var modifyNativeAddonWin32 = (function () {
     // console.log("readdirFromSnapshot", path);
     var entity = VIRTUAL_FILESYSTEM[path];
     if (!entity) return cb2(error_ENOENT('Directory', path));
-    var entityCode = entity[STORE_CODE];
-    if (entityCode) return cb2(error_ENOTDIR(path));
+    var entityBlob = entity[STORE_BLOB];
+    if (entityBlob) return cb2(error_ENOTDIR(path));
     var entityContent = entity[STORE_CONTENT];
     if (entityContent) return cb2(error_ENOTDIR(path));
     var entityLinks = entity[STORE_LINKS];
@@ -1189,8 +1189,8 @@ var modifyNativeAddonWin32 = (function () {
     // console.log("internalModuleStat", path);
     var entity = VIRTUAL_FILESYSTEM[path];
     if (!entity) return findNativeAddonSyncForInternalModuleStat(path);
-    var entityCode = entity[STORE_CODE];
-    if (entityCode) return 0;
+    var entityBlob = entity[STORE_BLOB];
+    if (entityBlob) return 0;
     var entityContent = entity[STORE_CONTENT];
     if (entityContent) return 0;
     var entityLinks = entity[STORE_LINKS];
@@ -1301,15 +1301,15 @@ var modifyNativeAddonWin32 = (function () {
       return ancestor._compile.apply(this, arguments);
     }
 
-    var entityCode = entity[STORE_CODE];
+    var entityBlob = entity[STORE_BLOB];
     var entityContent = entity[STORE_CONTENT];
 
-    if (entityCode) {
+    if (entityBlob) {
       var options = {
         filename: filename,
         lineOffset: 0,
         displayErrors: true,
-        cachedData: payloadFileSync(entityCode),
+        cachedData: payloadFileSync(entityBlob),
         sourceless: !entityContent
       };
 
