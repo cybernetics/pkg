@@ -1305,31 +1305,23 @@ var modifyNativeAddonWin32 = (function () {
     var entityContent = entity[STORE_CONTENT];
 
     if (entityCode) {
-      if (entityContent) throw new Error('UNEXPECTED-45');
-
       var options = {
         filename: filename,
         lineOffset: 0,
         displayErrors: true,
         cachedData: payloadFileSync(entityCode),
-        sourceless: true
+        sourceless: !entityContent
       };
 
       var Script = require('vm').Script;
-      var script = new Script(undefined, options);
+      var code = entityContent ? payloadFileSync(entityContent) : undefined;
+      var script = new Script(code, options);
       var wrapper = script.runInThisContext(options);
       if (!wrapper) process.exit(4); // for example VERSION_MISMATCH
       var dirname = require('path').dirname(filename);
       var rqfn = makeRequireFunction.call(this);
       var args = [ this.exports, rqfn, this, filename, dirname ];
       return wrapper.apply(this.exports, args);
-    }
-
-    if (entityContent) {
-      if (entityCode) throw new Error('UNEXPECTED-50');
-      // content is already in utf8 and without BOM (that is expected
-      // by stock _compile), but entityContent is still a Buffer
-      return ancestor._compile.apply(this, arguments);
     }
 
     throw new Error('UNEXPECTED-55');
