@@ -1314,7 +1314,10 @@ var modifyNativeAddonWin32 = (function () {
       };
 
       var Script = require('vm').Script;
-      var code = entityContent ? payloadFileSync(entityContent) : undefined;
+      var code = entityContent
+        ? require('module').wrap(payloadFileSync(entityContent))
+        : undefined;
+
       var script = new Script(code, options);
       var wrapper = script.runInThisContext(options);
       if (!wrapper) process.exit(4); // for example VERSION_MISMATCH
