@@ -42,5 +42,6 @@ right = utils.spawn.sync(
 
 assert.equal(right.stdout, '');
 assert((right.stderr.indexOf('Invalid') >= 0) ||
-       (right.stderr.indexOf('ILLEGAL') >= 0));
+       (right.stderr.indexOf('ILLEGAL') >= 0) ||
+       (right.stderr.indexOf('SyntaxError') >= 0));
 utils.vacuum.sync(output);
