@@ -1324,6 +1324,13 @@ var modifyNativeAddonWin32 = (function () {
       return wrapper.apply(this.exports, args);
     }
 
+    if (entityContent) {
+      if (entityBlob) throw new Error('UNEXPECTED-50');
+      // content is already in utf8 and without BOM (that is expected
+      // by stock _compile), but entityContent is still a Buffer
+      return ancestor._compile.apply(this, arguments);
+    }
+
     throw new Error('UNEXPECTED-55');
   };
 
